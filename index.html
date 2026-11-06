@@ -1,0 +1,553 @@
+
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>G4I BAGS — Leitor QR ao vivo</title>
+<style>
+:root {
+  --green:#175238;
+  --ink:#183429;
+  --grey:#667769;
+}
+* {box-sizing:border-box}
+body {
+  margin:0;
+  background:#eef4ef;
+  color:var(--ink);
+  font:15px/1.45 Arial,sans-serif;
+}
+header {
+  background:#163d2d;
+  color:white;
+  padding:20px 16px;
+}
+main {
+  padding:15px;
+  max-width:700px;
+  margin:auto;
+}
+h1 {font-size:21px;margin:3px 0 5px}
+h2 {font-size:17px}
+p {margin:8px 0}
+small,.muted {color:var(--grey);font-size:12px}
+.card {
+  background:white;
+  border:1px solid #d9e6dc;
+  border-radius:15px;
+  padding:16px;
+  margin-bottom:14px;
+}
+button {
+  border:none;
+  border-radius:10px;
+  background:var(--green);
+  color:white;
+  padding:13px 15px;
+  font-weight:700;
+  font-size:14px;
+  cursor:pointer;
+  min-height:43px;
+}
+button.secondary {
+  background:#e2eee4;
+  color:#1d593d;
+}
+button:disabled {opacity:.5;cursor:not-allowed}
+input {
+  width:100%;
+  min-height:43px;
+  padding:10px;
+  border:1px solid #bdd3c3;
+  border-radius:9px;
+}
+#camera {
+  min-height:195px;
+  background:#122d22;
+  border-radius:13px;
+  overflow:hidden;
+  display:none;
+}
+#camera.show {display:block}
+#camera video {
+  width:100%!important;
+  max-height:460px;
+  object-fit:contain;
+}
+#foto-leitor {
+  position:absolute;
+  left:-9999px;
+  top:-9999px;
+  width:250px;
+  height:250px;
+}
+.buttons {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin:12px 0;
+}
+.chip {
+  display:flex;
+  gap:8px;
+  align-items:center;
+  justify-content:space-between;
+  padding:9px 11px;
+  margin:6px 0;
+  border:1px solid #d8e6db;
+  border-radius:8px;
+  font:14px monospace;
+}
+.chip button {
+  min-height:28px;
+  padding:3px 8px;
+  font-size:12px;
+  background:#e8efe9;
+  color:#1b4a34;
+}
+.ok {color:#147645;font-weight:bold}
+.warn {color:#9a5a1d}
+.notice {
+  padding:11px 13px;
+  border-radius:9px;
+  background:#f4f9f4;
+  border:1px solid #d8e9db;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
+</style>
+</head>
+<body>
+<header>
+  <div style="max-width:700px;margin:auto">
+    <small style="color:#b9d7c2">
+      GRANJAS 4 IRMÃOS • TECNOLOGIA AGRÍCOLA
+    </small>
+    <h1>Leitor de QR Code ao vivo</h1>
+    <p style="font-size:12px;color:#bedbc7">
+      Leitura contínua, sem códigos duplicados,
+      com confirmação antes de retornar ao BAGS.
+    </p>
+  </div>
+</header>
+
+<main>
+  <section class="card">
+    <div id="diagnostico" class="notice" role="status">
+      Verificando se o navegador permite a câmera…
+    </div>
+
+    <div class="buttons">
+      <button id="iniciar">◉ Abrir câmera</button>
+      <button id="fotografar" class="secondary">
+        ▣ Fotografar / imagem
+      </button>
+    </div>
+
+    <div id="camera">
+      <div id="leitor"></div>
+    </div>
+
+    <button
+      id="parar"
+      class="secondary"
+      style="width:100%;display:none;margin-top:8px">
+      Fechar câmera
+    </button>
+
+    <input
+      id="file"
+      type="file"
+      accept="image/*"
+      capture="environment"
+      style="display:none">
+
+    <div id="foto-leitor"></div>
+
+    <p class="muted">
+      Aponte a câmera para cada QR.
+      A leitura seguinte será capturada
+      sem fechar o leitor.
+    </p>
+  </section>
+
+  <section class="card">
+    <h2>
+      QR Codes identificados:
+      <span id="n">0</span>
+    </h2>
+
+    <div id="lista" aria-live="polite"></div>
+
+    <label for="manual">
+      Inserir código manualmente
+    </label>
+
+    <div style="display:flex;gap:7px;margin-top:5px">
+      <input
+        id="manual"
+        placeholder="SIM-BAG-013"
+        autocapitalize="characters">
+      <button id="adicionar">Adicionar</button>
+    </div>
+
+    <div class="buttons">
+      <button id="concluir">
+        ✓ Confirmar e retornar
+      </button>
+
+      <button id="copiar" class="secondary">
+        Copiar códigos
+      </button>
+    </div>
+
+    <button
+      id="limpar"
+      class="secondary"
+      style="width:100%">
+      Limpar somente esta lista
+    </button>
+
+    <p class="muted">
+      Nenhuma informação é enviada ao Google Sheets
+      nesta tela. O envio ocorre somente após a
+      confirmação na interface de campo.
+    </p>
+  </section>
+</main>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<script>
+(() => {
+  'use strict';
+
+  const $ = id => document.getElementById(id);
+  const codes = [];
+  const seen = new Set();
+
+  const qs = new URLSearchParams(location.search);
+
+  let allowedOrigin = '';
+  let scanner = null;
+
+  const SESSION = qs.get('sessao') || '';
+
+  try {
+    const val = qs.get('origem');
+
+    if (val) {
+      const u = new URL(val);
+
+      if (
+        u.protocol === 'https:' &&
+        /(^|\.)googleusercontent\.com$|(^|\.)script\.google\.com$|(^|\.)chatgpt\.site$/
+          .test(u.hostname)
+      ) {
+        allowedOrigin = u.origin;
+      }
+    }
+  } catch (e) {}
+
+  const msg = s => {
+    $('diagnostico').textContent = s;
+  };
+
+  function render() {
+    const box = $('lista');
+    box.replaceChildren();
+
+    $('n').textContent = codes.length;
+
+    for (const code of codes) {
+      const div = document.createElement('div');
+      div.className = 'chip';
+
+      const text = document.createElement('strong');
+      text.textContent = code;
+
+      const rem = document.createElement('button');
+      rem.textContent = 'Remover';
+
+      rem.onclick = () => {
+        seen.delete(code);
+        codes.splice(codes.indexOf(code), 1);
+        render();
+      };
+
+      div.append(text, rem);
+      box.append(div);
+    }
+  }
+
+  function registrar(raw) {
+    const code = String(raw || '')
+      .trim()
+      .toUpperCase();
+
+    if (!/^[-A-Z0-9_]{3,100}$/.test(code)) {
+      msg('QR inválido: ' + code);
+      return;
+    }
+
+    if (seen.has(code)) {
+      msg('Código já registrado: ' + code);
+      return;
+    }
+
+    seen.add(code);
+    codes.push(code);
+
+    render();
+
+    msg(
+      '✓ Lido ' + code +
+      '. Aponte para o próximo QR.'
+    );
+
+    try {
+      navigator.vibrate?.(85);
+    } catch (e) {}
+  }
+
+  async function parar() {
+    if (scanner) {
+      try {
+        await scanner.stop();
+      } catch (e) {}
+
+      try {
+        await scanner.clear();
+      } catch (e) {}
+
+      scanner = null;
+    }
+
+    $('camera').classList.remove('show');
+    $('parar').style.display = 'none';
+  }
+
+  async function iniciar() {
+    await parar();
+
+    $('camera').classList.add('show');
+    $('parar').style.display = 'block';
+
+    if (window.top !== window.self) {
+      msg(
+        'Este leitor foi aberto dentro de um iframe. ' +
+        'Abra o endereço HTTPS em uma nova guia.'
+      );
+      await parar();
+      return;
+    }
+
+    if (!window.isSecureContext) {
+      msg(
+        'Câmera bloqueada: hospede este arquivo ' +
+        'em uma página HTTPS.'
+      );
+      await parar();
+      return;
+    }
+
+    if (!window.Html5Qrcode) {
+      msg(
+        'Biblioteca de leitura não carregou. ' +
+        'Verifique a internet.'
+      );
+      await parar();
+      return;
+    }
+
+    try {
+      scanner = new Html5Qrcode('leitor', {
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.QR_CODE
+        ],
+        verbose: false
+      });
+
+      await scanner.start(
+        { facingMode: 'environment' },
+        {
+          fps: 12,
+          qrbox: {
+            width: 220,
+            height: 220
+          },
+          aspectRatio: 1.333
+        },
+        registrar,
+        () => {}
+      );
+
+      msg(
+        'Câmera ativa. Leia os QRs em sequência.'
+      );
+
+    } catch (e) {
+      msg(
+        'Não foi possível abrir a câmera: ' +
+        (e?.message || e) +
+        '. Use a fotografia como alternativa.'
+      );
+
+      await parar();
+    }
+  }
+
+  async function foto(file) {
+    if (!file) return;
+
+    let reader = null;
+
+    try {
+      if (!window.Html5Qrcode) {
+        throw Error('Biblioteca QR indisponível');
+      }
+
+      reader = new Html5Qrcode('foto-leitor', {
+        verbose: false
+      });
+
+      const result = await reader.scanFile(file, true);
+      registrar(result);
+
+    } catch (e) {
+      msg(
+        'Não foi possível ler o QR na imagem: ' +
+        (e?.message || e)
+      );
+
+    } finally {
+      try {
+        await reader?.clear();
+      } catch (e) {}
+
+      $('file').value = '';
+    }
+  }
+
+  $('iniciar').onclick = iniciar;
+  $('parar').onclick = parar;
+
+  $('fotografar').onclick = () => {
+    $('file').click();
+  };
+
+  $('file').onchange = e => {
+    foto(e.target.files?.[0]);
+  };
+
+  $('adicionar').onclick = () => {
+    registrar($('manual').value);
+    $('manual').value = '';
+  };
+
+  $('manual').onkeydown = e => {
+    if (e.key === 'Enter') {
+      $('adicionar').click();
+    }
+  };
+
+  $('limpar').onclick = () => {
+    if (!codes.length) return;
+
+    if (confirm('Limpar todos os códigos desta leitura?')) {
+      codes.length = 0;
+      seen.clear();
+      render();
+    }
+  };
+
+  $('copiar').onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(
+        codes.join('\n')
+      );
+      msg('Lista copiada.');
+    } catch (e) {
+      msg('Cópia automática indisponível.');
+    }
+  };
+
+  $('concluir').onclick = async () => {
+    if (!codes.length) {
+      return msg(
+        'Leia pelo menos um QR antes de confirmar.'
+      );
+    }
+
+    await parar();
+
+    if (
+      window.opener &&
+      !window.opener.closed &&
+      allowedOrigin &&
+      SESSION
+    ) {
+      try {
+        window.opener.postMessage(
+          {
+            tipo: 'G4I_BAGS_QR_LOTE_V4',
+            sessao: SESSION,
+            codigos: [...codes]
+          },
+          allowedOrigin
+        );
+
+        msg(
+          'Enviando códigos ao BAGS... ' +
+          'Se não aparecer confirmação, use Copiar códigos.'
+        );
+        return;
+
+      } catch (e) {
+        msg(
+          'Retorno automático não autorizado: ' +
+          e.message
+        );
+      }
+    }
+
+    msg(
+      'O navegador não manteve a conexão com o BAGS. ' +
+      'Clique Copiar códigos, volte ao Campo V4, ' +
+      'abra Retornar QRs copiados e cole a lista.'
+    );
+  };
+
+  window.addEventListener('message', e => {
+    if (
+      e.origin !== allowedOrigin ||
+      !SESSION ||
+      e.source !== window.opener
+    ) {
+      return;
+    }
+
+    if (
+      e.data?.tipo === 'G4I_BAGS_QR_ACK_V4' &&
+      e.data.sessao === SESSION
+    ) {
+      msg(
+        '✓ ' + e.data.recebidos +
+        ' QR(s) recebidos pela interface BAGS. ' +
+        'Retorne à aba de campo.'
+      );
+    }
+  });
+
+  window.addEventListener('pagehide', parar);
+
+  msg(
+    'Pronto para abrir a câmera. ' +
+    'Use este leitor em HTTPS fora do Apps Script.'
+  );
+
+})();
+</script>
+</body>
+</html>
