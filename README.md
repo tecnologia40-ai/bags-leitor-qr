@@ -1,0 +1,1 @@
+# bags-leitor-qr
