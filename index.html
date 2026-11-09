@@ -4,392 +4,398 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>G4I BAGS — Leitor QR ao vivo</title>
+<title>G4I BAGS — Leitor QR</title>
 <style>
-:root{--green:#175238;--ink:#183429;--grey:#667769}
 *{box-sizing:border-box}
-body{margin:0;background:#eef4ef;color:var(--ink);font:15px/1.45 Arial,sans-serif}
+body{margin:0;background:#eef4ef;color:#183429;font:15px/1.45 Arial,sans-serif}
 header{background:#163d2d;color:white;padding:20px 16px}
-main{padding:15px;max-width:700px;margin:auto}
-h1{font-size:21px;margin:3px 0 5px}
-h2{font-size:17px}
-p{margin:8px 0}
-small,.muted{color:var(--grey);font-size:12px}
+header p{color:#c5decf}
+main{max-width:700px;margin:auto;padding:15px}
+h1{font-size:22px;margin:4px 0}
+h2{font-size:18px}
 .card{background:white;border:1px solid #d9e6dc;border-radius:15px;padding:16px;margin-bottom:14px}
-button{border:none;border-radius:10px;background:var(--green);color:white;padding:13px 15px;font-weight:700;font-size:14px;cursor:pointer;min-height:43px}
-button.secondary{background:#e2eee4;color:#1d593d}
-button:disabled{opacity:.5;cursor:not-allowed}
-input{width:100%;min-height:43px;padding:10px;border:1px solid #bdd3c3;border-radius:9px}
-#camera{min-height:195px;background:#122d22;border-radius:13px;overflow:hidden;display:none}
-#camera.show{display:block}
+button{border:0;border-radius:10px;background:#175238;color:white;padding:13px;font-weight:bold;font-size:14px;cursor:pointer;min-height:44px}
+button.sec{background:#e2eee4;color:#1d593d}
+button:disabled{opacity:.5}
+input{width:100%;min-height:44px;padding:10px;border:1px solid #bdd3c3;border-radius:9px;font:inherit}
+.buttons{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:12px 0}
+#camera{background:#122d22;border-radius:12px;overflow:hidden;display:none}
+#camera.visivel{display:block}
 #camera video{width:100%!important;max-height:460px;object-fit:contain}
-#foto-leitor{position:absolute;left:-9999px;top:-9999px;width:250px;height:250px}
-.buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
-.chip{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:9px 11px;margin:6px 0;border:1px solid #d8e6db;border-radius:8px;font:14px monospace}
-.chip button{min-height:28px;padding:3px 8px;font-size:12px;background:#e8efe9;color:#1b4a34}
-.ok{color:#147645;font-weight:bold}
-.warn{color:#9a5a1d}
-.notice{padding:11px 13px;border-radius:9px;background:#f4f9f4;border:1px solid #d8e9db;white-space:pre-wrap;overflow-wrap:anywhere}
-.sr{position:absolute;left:-9999px}
+#fotoArea{position:absolute;left:-9999px;top:-9999px;width:250px;height:250px}
+.aviso{background:#f3f8f3;border:1px solid #d5e7d8;padding:12px;border-radius:9px;white-space:pre-wrap;overflow-wrap:anywhere}
+.qr{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px;margin:6px 0;border:1px solid #d8e6db;border-radius:9px;font:14px monospace}
+.qr button{min-height:30px;padding:4px 9px;background:#e8efe9;color:#1b4a34}
+small{color:#667769}
 </style>
 </head>
 <body>
 <header>
-<div style="max-width:700px;margin:auto">
-<small style="color:#b9d7c2">GRANJAS 4 IRMÃOS • TECNOLOGIA AGRÍCOLA</small>
 <h1>Leitor de QR Code ao vivo</h1>
-<p style="font-size:12px;color:#bedbc7">
-Leitura contínua, sem códigos duplicados, com confirmação antes de retornar ao BAGS.
-</p>
-</div>
+<p>GRANJAS 4 IRMÃOS • BAGS V4</p>
 </header>
 
 <main>
 <section class="card">
-<div id="diagnostico" class="notice" role="status">
-Verificando se o navegador permite a câmera…
+<div id="mensagem" class="aviso" role="status">
+Verificando configuração…
 </div>
 <div class="buttons">
-<button id="iniciar">◉ Abrir câmera</button>
-<button id="fotografar" class="secondary">▣ Fotografar / imagem</button>
+<button id="abrir">◉ Abrir câmera</button>
+<button id="fotografar" class="sec">Fotografar / imagem</button>
 </div>
-<div id="camera"><div id="leitor"></div></div>
-<button id="parar" class="secondary" style="width:100%;display:none;margin-top:8px">
+<div id="camera">
+<div id="leitor"></div>
+</div>
+<button id="parar" class="sec" style="width:100%;display:none;margin-top:9px">
 Fechar câmera
 </button>
-<input id="file" type="file" accept="image/*" capture="environment" style="display:none">
-<div id="foto-leitor"></div>
-<p class="muted">
-Aponte a câmera para cada QR; a leitura seguinte será capturada sem fechar o leitor.
-</p>
+<input id="arquivo" type="file" accept="image/*" capture="environment" hidden>
+<div id="fotoArea"></div>
+<p><small>Aponte para cada QR. O leitor impede repetições e para no limite da carga.</small></p>
 </section>
 
 <section class="card">
-<h2>QR Codes identificados: <span id="n">0</span></h2>
-<p id="capacidade" class="notice" style="margin:8px 0" aria-live="polite">
-Aguardando a operação do BAGS…
-</p>
-<div id="lista" aria-live="polite"></div>
+<h2>QR Codes lidos: <span id="total">0</span></h2>
+<div id="capacidade" class="aviso">Aguardando dados da carga.</div>
+<div id="lista"></div>
 
-<label for="manual">Inserir código manualmente</label>
-<div style="display:flex;gap:7px;margin-top:5px">
-<input id="manual" placeholder="SIM-BAG-013" autocapitalize="characters">
+<label for="manual">Inserir QR manualmente</label>
+<div class="buttons">
+<input id="manual" placeholder="SIM-BAG-013">
 <button id="adicionar">Adicionar</button>
 </div>
+
 <div class="buttons">
-<button id="concluir">✓ Confirmar e retornar</button>
-<button id="copiar" class="secondary">Copiar códigos</button>
+<button id="confirmar">✓ Confirmar e retornar</button>
+<button id="copiar" class="sec">Copiar códigos</button>
 </div>
-<button id="limpar" class="secondary" style="width:100%">
-Limpar somente esta lista
-</button>
-<p class="muted">
-Nenhuma informação é enviada ao Google Sheets nesta tela.
-O envio ocorre somente após a confirmação na interface de campo.
-</p>
+<button id="limpar" class="sec" style="width:100%">Limpar leitura</button>
+<p><small>Esta página não altera a planilha. Os códigos retornam ao Campo BAGS para conferência e posterior sincronização.</small></p>
 </section>
 </main>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
-(()=>{
+(() => {
 'use strict';
 
-const $=id=>document.getElementById(id);
-const codes=[];
-const seen=new Set();
-const qs=new URLSearchParams(location.search);
+const $ = id => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+const codigos = [];
+const existentes = new Set();
 
-let allowedOrigin='';
-let scanner=null;
-let concluindo=false;
+const n = Number(params.get('limite'));
+const LIMITE = Number.isInteger(n) && n >= 1 && n <= 100 ? n : 0;
+const SESSAO = params.get('sessao') || '';
+const OPERACAO = String(params.get('operacao') || '').toUpperCase();
 
-const SESSION=qs.get('sessao')||'';
-const N=Number(qs.get('limite'));
-const LIMITE=Number.isInteger(N)&&N>0&&N<=100?N:0;
-const OPERACAO=String(qs.get('operacao')||'').toUpperCase();
+let origem = '';
+let scanner = null;
+let concluindo = false;
+let leitorAtivo = false;
 
-try{
-  const val=qs.get('origem');
-  if(val){
-    const u=new URL(val);
-    if(
-      u.protocol==='https:' &&
-      /(^|\.)googleusercontent\.com$|(^|\.)script\.google\.com$|(^|\.)chatgpt\.site$/.test(u.hostname)
-    ){
-      allowedOrigin=u.origin;
+try {
+  const valor = params.get('origem');
+  if (valor) {
+    const url = new URL(valor);
+    if (
+      url.protocol === 'https:' &&
+      (
+        url.hostname === 'script.google.com' ||
+        url.hostname.endsWith('.googleusercontent.com') ||
+        url.hostname === 'googleusercontent.com'
+      )
+    ) {
+      origem = url.origin;
     }
   }
-}catch(e){}
+} catch (e) {}
 
-function msg(s){
-  $('diagnostico').textContent=s;
+function aviso(texto) {
+  $('mensagem').textContent = texto;
 }
 
-function status(){
-  $('capacidade').textContent=LIMITE
-    ?'Operação: '+OPERACAO+' • '+codes.length+' de '+LIMITE+
-     ' QRs • restam '+(LIMITE-codes.length)
-    :'Abra este leitor pelo botão Ler QR ao vivo do Campo BAGS V4 para receber o limite da carga.';
-}
+function mostrar() {
+  $('total').textContent = codigos.length;
 
-function render(){
-  const box=$('lista');
-  box.replaceChildren();
-  $('n').textContent=codes.length;
-  status();
+  $('capacidade').textContent = LIMITE
+    ? 'Operação: ' + OPERACAO +
+      '\nLidos: ' + codigos.length + ' de ' + LIMITE +
+      '\nRestantes: ' + (LIMITE - codigos.length)
+    : 'Limite da carga não recebido. Abra o leitor pelo Campo BAGS V4.';
 
-  for(const code of codes){
-    const div=document.createElement('div');
-    div.className='chip';
+  const lista = $('lista');
+  lista.replaceChildren();
 
-    const text=document.createElement('strong');
-    text.textContent=code;
+  codigos.forEach(codigo => {
+    const item = document.createElement('div');
+    item.className = 'qr';
 
-    const rem=document.createElement('button');
-    rem.textContent='Remover';
+    const texto = document.createElement('strong');
+    texto.textContent = codigo;
 
-    rem.onclick=()=>{
-      seen.delete(code);
-      codes.splice(codes.indexOf(code),1);
-      render();
+    const remover = document.createElement('button');
+    remover.textContent = 'Remover';
+    remover.onclick = () => {
+      existentes.delete(codigo);
+      codigos.splice(codigos.indexOf(codigo), 1);
+      concluindo = false;
+      mostrar();
     };
 
-    div.append(text,rem);
-    box.append(div);
+    item.append(texto, remover);
+    lista.append(item);
+  });
+}
+
+function registrar(valor) {
+  if (!LIMITE) {
+    aviso('O Campo BAGS não enviou o limite da carga. Volte ao BAGS e abra o leitor pelo botão da operação.');
+    return;
+  }
+
+  const codigo = String(valor || '').trim().toUpperCase();
+
+  if (!/^[-A-Z0-9_]{3,100}$/.test(codigo)) {
+    aviso('Código QR com formato inválido: ' + codigo);
+    return;
+  }
+
+  if (existentes.has(codigo)) {
+    aviso('Este QR já foi lido: ' + codigo);
+    return;
+  }
+
+  if (codigos.length >= LIMITE) {
+    aviso('Limite da carga atingido. Nenhum outro QR será aceito.');
+    return;
+  }
+
+  existentes.add(codigo);
+  codigos.push(codigo);
+  mostrar();
+
+  try { navigator.vibrate?.(70); } catch (e) {}
+
+  if (codigos.length === LIMITE) {
+    aviso('✓ Limite de ' + LIMITE + ' QR(s) atingido. Retornando ao Campo BAGS…');
+    setTimeout(() => concluir(), 350);
+  } else {
+    aviso('✓ Lido: ' + codigo + '. Faltam ' + (LIMITE - codigos.length) + ' QR(s).');
   }
 }
 
-function registrar(raw){
-  const code=String(raw||'').trim().toUpperCase();
+async function parar() {
+  leitorAtivo = false;
 
-  if(!LIMITE){
-    msg('Volte ao Campo BAGS V4, selecione a carga e o colaborador, e abra a câmera por lá.');
-    return;
+  if (scanner) {
+    try { await scanner.stop(); } catch (e) {}
+    try { await scanner.clear(); } catch (e) {}
+    scanner = null;
   }
 
-  if(!/^[-A-Z0-9_]{3,100}$/.test(code)){
-    msg('QR inválido: '+code);
-    return;
-  }
-
-  if(seen.has(code)){
-    msg('QR já registrado: '+code);
-    return;
-  }
-
-  if(codes.length>=LIMITE){
-    msg('Limite da operação atingido. Retorne ao Campo BAGS.');
-    return;
-  }
-
-  seen.add(code);
-  codes.push(code);
-  render();
-
-  try{navigator.vibrate?.(75)}catch(e){}
-
-  if(codes.length>=LIMITE){
-    msg('✓ Limite de '+LIMITE+' QR(s) atingido. Retornando ao BAGS…');
-    setTimeout(()=>concluir(true),450);
-  }else{
-    msg('✓ Lido '+code+' • faltam '+(LIMITE-codes.length)+' QR(s).');
-  }
+  $('camera').classList.remove('visivel');
+  $('parar').style.display = 'none';
 }
 
-async function parar(){
-  if(scanner){
-    try{await scanner.stop()}catch(e){}
-    try{await scanner.clear()}catch(e){}
-    scanner=null;
-  }
-  $('camera').classList.remove('show');
-  $('parar').style.display='none';
-}
-
-async function iniciar(){
-  if(!LIMITE){
-    return msg('Abra o leitor pelo botão do Campo BAGS V4 após selecionar carga e colaborador.');
+async function abrirCamera() {
+  if (!LIMITE) {
+    aviso('Leitura bloqueada: o limite da carga não foi recebido do BAGS.');
+    return;
   }
 
-  if(codes.length>=LIMITE){
-    return msg('Limite atingido. Confirme ou remova um QR para continuar.');
+  if (codigos.length >= LIMITE) {
+    aviso('A quantidade da carga já foi atingida.');
+    return;
+  }
+
+  if (!window.isSecureContext) {
+    aviso('O navegador exige uma página HTTPS para acessar a câmera.');
+    return;
+  }
+
+  if (!window.Html5Qrcode) {
+    aviso('A biblioteca QR não carregou. Verifique a conexão com a internet.');
+    return;
   }
 
   await parar();
 
-  $('camera').classList.add('show');
-  $('parar').style.display='block';
+  $('camera').classList.add('visivel');
+  $('parar').style.display = 'block';
 
-  if(window.top!==window.self){
-    msg('Este leitor foi aberto dentro de um iframe. Abra o endereço HTTPS em uma nova guia.');
-    await parar();
-    return;
-  }
-
-  if(!window.isSecureContext){
-    msg('Câmera bloqueada: esta página precisa de HTTPS.');
-    await parar();
-    return;
-  }
-
-  if(!window.Html5Qrcode){
-    msg('Biblioteca de leitura não carregou. Verifique a internet.');
-    await parar();
-    return;
-  }
-
-  try{
-    scanner=new Html5Qrcode('leitor',{
-      formatsToSupport:[Html5QrcodeSupportedFormats.QR_CODE],
-      verbose:false
+  try {
+    scanner = new Html5Qrcode('leitor', {
+      verbose: false
     });
 
-    await scanner.start(
-      {facingMode:'environment'},
-      {
-        fps:12,
-        qrbox:{width:220,height:220},
-        aspectRatio:1.333
-      },
-      registrar,
-      ()=>{}
-    );
+    const configuracao = {
+      fps: 10,
+      qrbox: { width: 220, height: 220 }
+    };
 
-    msg('Câmera ativa. Leia os QRs em sequência.');
-  }catch(e){
-    msg('Não foi possível abrir a câmera: '+(e?.message||e)+'. Use fotografia como alternativa.');
+    try {
+      await scanner.start(
+        { facingMode: 'environment' },
+        configuracao,
+        registrar,
+        () => {}
+      );
+    } catch (primeiroErro) {
+      try { await scanner.clear(); } catch (e) {}
+      scanner = new Html5Qrcode('leitor', { verbose: false });
+
+      const cameras = await Html5Qrcode.getCameras();
+      if (!cameras.length) throw primeiroErro;
+
+      const traseira = cameras.find(c =>
+        /back|rear|traseira|environment/i.test(c.label)
+      ) || cameras[cameras.length - 1];
+
+      await scanner.start(
+        traseira.id,
+        configuracao,
+        registrar,
+        () => {}
+      );
+    }
+
+    leitorAtivo = true;
+    aviso('Câmera ativa. Leia os QRs em sequência.');
+
+  } catch (erro) {
+    aviso(
+      'Não foi possível iniciar a câmera: ' +
+      (erro?.message || erro) +
+      '\nConfira a permissão de câmera no Chrome.'
+    );
     await parar();
   }
 }
 
-async function foto(file){
-  if(!file)return;
+async function lerFoto(arquivo) {
+  if (!arquivo) return;
 
-  let reader=null;
+  let leitor = null;
 
-  try{
-    if(!window.Html5Qrcode){
-      throw Error('Biblioteca QR indisponível');
-    }
+  try {
+    if (!LIMITE) throw Error('Limite da carga não recebido.');
+    if (!window.Html5Qrcode) throw Error('Biblioteca QR indisponível.');
 
-    reader=new Html5Qrcode('foto-leitor',{verbose:false});
-    const result=await reader.scanFile(file,true);
-    registrar(result);
-  }catch(e){
-    msg('Não foi possível ler o QR na imagem: '+(e?.message||e));
-  }finally{
-    try{await reader?.clear()}catch(e){}
-    $('file').value='';
+    leitor = new Html5Qrcode('fotoArea', { verbose: false });
+    const codigo = await leitor.scanFile(arquivo, true);
+    registrar(codigo);
+
+  } catch (erro) {
+    aviso('Fotografia: ' + (erro?.message || erro));
+  } finally {
+    try { await leitor?.clear(); } catch (e) {}
+    $('arquivo').value = '';
   }
 }
 
-$('iniciar').onclick=iniciar;
-$('parar').onclick=parar;
-$('fotografar').onclick=()=>$('file').click();
-$('file').onchange=e=>foto(e.target.files?.[0]);
+async function concluir() {
+  if (!codigos.length) {
+    aviso('Leia pelo menos um QR antes de confirmar.');
+    return;
+  }
 
-$('adicionar').onclick=()=>{
+  if (concluindo) return;
+  concluindo = true;
+  await parar();
+
+  if (window.opener && !window.opener.closed && origem && SESSAO) {
+    try {
+      window.opener.postMessage({
+        tipo: 'G4I_BAGS_QR_LOTE_V4',
+        sessao: SESSAO,
+        codigos: [...codigos]
+      }, origem);
+
+      aviso('Enviando ' + codigos.length +
+        ' QR(s) para o BAGS. Se não retornar, toque em Copiar códigos.');
+      return;
+    } catch (erro) {
+      aviso('Falha no retorno: ' + erro.message);
+    }
+  }
+
+  concluindo = false;
+  aviso('O Chrome não permitiu o retorno automático. Use Copiar códigos e importe a lista no Campo BAGS.');
+}
+
+window.addEventListener('message', evento => {
+  if (
+    !origem ||
+    evento.origin !== origem ||
+    evento.source !== window.opener ||
+    evento.data?.sessao !== SESSAO ||
+    evento.data?.tipo !== 'G4I_BAGS_QR_ACK_V4'
+  ) return;
+
+  if (evento.data.ok === false) {
+    concluindo = false;
+    aviso('O Campo BAGS recusou os códigos: ' + evento.data.erro);
+    return;
+  }
+
+  aviso('✓ Códigos recebidos pelo Campo BAGS. Retornando…');
+
+  try { window.opener.focus(); } catch (e) {}
+
+  setTimeout(() => {
+    try { window.close(); } catch (e) {}
+  }, 450);
+});
+
+$('abrir').onclick = abrirCamera;
+$('parar').onclick = parar;
+$('fotografar').onclick = () => $('arquivo').click();
+$('arquivo').onchange = e => lerFoto(e.target.files?.[0]);
+
+$('adicionar').onclick = () => {
   registrar($('manual').value);
-  $('manual').value='';
+  $('manual').value = '';
 };
 
-$('manual').onkeydown=e=>{
-  if(e.key==='Enter'){
+$('manual').onkeydown = e => {
+  if (e.key === 'Enter') {
     e.preventDefault();
     $('adicionar').click();
   }
 };
 
-$('limpar').onclick=()=>{
-  if(!codes.length)return;
+$('confirmar').onclick = concluir;
 
-  if(confirm('Limpar todos os códigos desta leitura?')){
-    codes.length=0;
-    seen.clear();
-    concluindo=false;
-    render();
+$('copiar').onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(codigos.join('\n'));
+    aviso('Lista copiada. Volte ao Campo BAGS e importe os códigos.');
+  } catch (erro) {
+    aviso('Não foi possível copiar automaticamente neste navegador.');
   }
 };
 
-$('copiar').onclick=async()=>{
-  try{
-    await navigator.clipboard.writeText(codes.join('\n'));
-    msg('Lista copiada.');
-  }catch(e){
-    msg('Cópia automática indisponível.');
+$('limpar').onclick = () => {
+  if (codigos.length && confirm('Limpar a lista de QR Codes?')) {
+    codigos.length = 0;
+    existentes.clear();
+    concluindo = false;
+    mostrar();
   }
 };
 
-async function concluir(){
-  if(!codes.length){
-    return msg('Leia pelo menos um QR antes de confirmar.');
-  }
-
-  if(concluindo)return;
-  concluindo=true;
-
-  await parar();
-
-  if(window.opener&&!window.opener.closed&&allowedOrigin&&SESSION){
-    try{
-      window.opener.postMessage(
-        {
-          tipo:'G4I_BAGS_QR_LOTE_V4',
-          sessao:SESSION,
-          codigos:[...codes]
-        },
-        allowedOrigin
-      );
-
-      msg('Enviando '+codes.length+' QR(s) ao BAGS. Se não retornar, use Copiar códigos.');
-      return;
-    }catch(e){
-      msg('Retorno automático não autorizado: '+e.message);
-    }
-  }
-
-  concluindo=false;
-  msg('O navegador não permitiu o retorno automático. Use Copiar códigos e cole no Campo BAGS.');
-}
-
-$('concluir').onclick=()=>concluir();
-
-window.addEventListener('message',e=>{
-  if(
-    e.origin!==allowedOrigin||
-    !SESSION||
-    e.source!==window.opener
-  )return;
-
-  if(
-    e.data?.tipo==='G4I_BAGS_QR_ACK_V4'&&
-    e.data.sessao===SESSION
-  ){
-    if(e.data.ok===false){
-      concluindo=false;
-      msg('O BAGS rejeitou a lista: '+e.data.erro+'. Corrija os códigos e tente novamente.');
-    }else{
-      msg('✓ '+e.data.recebidos+' QR(s) recebidos pelo BAGS. Retornando à operação…');
-
-      try{window.opener?.focus()}catch(e){}
-
-      setTimeout(()=>{
-        try{window.close()}catch(e){}
-      },450);
-    }
-  }
+window.addEventListener('pagehide', () => {
+  parar();
 });
 
-window.addEventListener('pagehide',parar);
-
-status();
-msg(
+mostrar();
+aviso(
   LIMITE
-    ?'Pronto: até '+LIMITE+' QR(s) para '+OPERACAO+'. Abra a câmera.'
-    :'Volte ao Campo BAGS V4 e inicie a leitura por lá para aplicar o limite da carga.'
+    ? 'Pronto para ler até ' + LIMITE + ' QR(s). Toque em Abrir câmera.'
+    : 'Abra o leitor pelo Campo BAGS V4 após selecionar carga e colaborador.'
 );
-
 })();
 </script>
 </body>
